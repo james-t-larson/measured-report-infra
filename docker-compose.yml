@@ -1,0 +1,105 @@
+services:
+  api:
+    build:
+      context: ../../measured-report-api/
+    image: api:${API_BUILD_ID}
+    container_name: ${BUILD_ENV}-api
+    dockerfile: ../../measured-report-api/Dockerfile
+    restart: always
+    env_file:
+      - ../env/${BUILD_ENV}.env
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+      - /app/vendor/bundle
+    networks:
+      - network
+
+  client:
+    build:
+      context: ../../measured-report-client/
+    image: client:${CLIENT_BUILD_ID}
+    container_name: ${BUILD_ENV}-client
+    dockerfile: ../../measured-report-client/Dockerfile
+    restart: always
+    env_file:
+      - ../env/${BUILD_ENV}.env
+    ports:
+      - "${CLIENT_PORT}:${CLIENT_PORT}"
+    networks:
+      - network
+
+  sidekiq:
+    build:
+      context: ../../.
+    image: api:${BUILD_ID}
+    container_name: ${BUILD_ENV}-sidekiq
+    restart: always
+    command: bundle exec sidekiq
+    env_file:
+      - ../env/${BUILD_ENV}.env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - network
+
+  db:
+    image: postgres
+    container_name: ${BUILD_ENV}-db
+    env_file:
+      - ../env/${BUILD_ENV}.env
+    ports:
+      - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ${BUILD_ENV}-db-volume:/var/lib/postgresql/data
+    networks:
+      - network
+
+  redis:
+    image: redis
+    container_name: ${BUILD_ENV}-redis
+    ports:
+      - 6379
+    volumes:
+      - ${BUILD_ENV}-redis-volume:/var/lib/redis/data
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+#  TODO: This should be done in a less repetative way
+volumes:
+  development-db-volume:
+    name: ${BUILD_ENV}-db-volume
+  static-db-volume:
+    name: ${BUILD_ENV}-db-volume
+  staging-db-volume:
+    name: ${BUILD_ENV}-db-volume
+  production-db-volume:
+    name: ${BUILD_ENV}-db-volume
+  development-redis-volume:
+    name: ${BUILD_ENV}-redis-volume
+  static-redis-volume:
+    name: ${BUILD_ENV}-redis-volume
+  staging-redis-volume:
+    name: ${BUILD_ENV}-redis-volume
+  production-redis-volume:
+    name: ${BUILD_ENV}-redis-volume
+
+networks:
+  network:
+    name: ${BUILD_ENV}-network
+    driver: bridge
