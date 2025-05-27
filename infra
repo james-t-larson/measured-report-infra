@@ -1,0 +1,40 @@
+#!/usr/bin/env lua
+
+local argparse = require("argparse")
+
+local parser = argparse("infra", "Infra management CLI")
+local command = arg[1]
+
+local default_path = "../measured-report-"
+local service_choices = { "api", "client" }
+local env_choices = { "development", "staging", "production" }
+
+if command == "build" then
+	local sub_parser = parser:command("build", "Build a service")
+	sub_parser:argument("service", "Service name"):choices(service_choices)
+	sub_parser:option("--path", "Optional path")
+	local args = parser:parse()
+
+	local build = require("actions.build")
+
+	local path = default_path .. args.service
+	build(args.service, path)
+elseif command == "deploy" then
+	local sub_parser = parser:command("deploy", "Deploy a service")
+	sub_parser:argument("service", "Service name"):choices(service_choices)
+	sub_parser:argument("env", "Environment"):choices(env_choices)
+	sub_parser:option("--build_id", "Deploy specific tag/sha")
+	local args = parser:parse()
+
+	local deploy = require("actions.deploy")
+
+	deploy(args.service, args.env, args.build_id)
+elseif command == "start" then
+	local sub_parser = parser:command("start", "Start services")
+	sub_parser:argument("env", "Environment"):choices(env_choices)
+	local args = parser:parse()
+
+	local start = require("actions.start")
+
+	start(args.env)
+end
