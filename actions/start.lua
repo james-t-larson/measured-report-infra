@@ -15,30 +15,19 @@ local function get_image(service, env)
 end
 
 return function(env)
-	local api_image = get_image("api", env)
-	local client_image = get_image("client", env)
+	local start_up_vars = table.concat({
+		"BUILD_ENV=" .. env,
+		"API_IMAGE=" .. get_image("api", env),
+		"CLIENT_IMAGE=" .. get_image("client", env),
+	}, " ")
 
-	print(client_image)
+	local env_file = " --env-file ./env/" .. env .. ".env"
+	local compose_file = " -f ./docker-compose.yml"
+	local project = " -p " .. env
+	local compose_up = " up -d"
 
-	local cmd = string
-		.format(
-			[[
-  BUILD_ENV="%s"
-  CLIENT_IMAGE="%s"
-  API_IMAGE="%s"
-  docker compose
-  --env-file "./env/%s.env"
-  -f "./docker-compose.yml"
-  -p "%s" up -d
-]],
-			env,
-			client_image,
-			api_image,
-			env,
-			env
-		)
-		:gsub("\n", " ")
+	local command = start_up_vars .. " docker compose" .. env_file .. compose_file .. project .. compose_up
 
-	print(cmd)
-	os.execute(cmd)
+	print(command)
+	os.execute(command)
 end
