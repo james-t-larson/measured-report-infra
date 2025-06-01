@@ -1,9 +1,10 @@
 local os = require("os")
 local io = require("io")
 
-local function get_image(service)
-	local running_image = io.popen('docker ps -a --filter "name=' .. service .. '" --format "{{.Image}}" | head -n 1')
-		:read("*l") or ""
+local function get_image(service, env)
+	local running_image = io.popen(
+		'docker ps -a --filter "name=' .. env .. "-" .. service .. '" --format "{{.Image}}" | head -n 1'
+	):read("*l") or ""
 
 	if running_image == "" then
 		return io.popen('docker images --format "{{.Repository}}:{{.Tag}}" | sort -r | grep ' .. service):read("*l")
@@ -14,8 +15,10 @@ local function get_image(service)
 end
 
 return function(env)
-	local api_image = get_image("api")
-	local client_image = get_image("client")
+	local api_image = get_image("api", env)
+	local client_image = get_image("client", env)
+
+	print(client_image)
 
 	local cmd = string
 		.format(
